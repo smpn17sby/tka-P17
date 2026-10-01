@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#eef2ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+
+    <title>Login Siswa - TKA SMP Negeri 17 Surabaya</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            min-height: 100dvh;
+            -webkit-font-smoothing: antialiased;
+        }
+        .bg-modern {
+            background: linear-gradient(135deg, #eef2ff 0%, #e0f2fe 40%, #ecfdf5 100%);
+            background-attachment: fixed;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        input, select {
+            font-size: 16px;
+        }
+        .school-logo {
+            object-fit: contain;
+            background: #ffffff;
+            aspect-ratio: 1 / 1;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in-up {
+            animation: fadeInUp 0.5s ease-out;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .shake { animation: shake 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-modern flex items-center justify-center p-4 min-h-screen">
+
+    <div class="w-full max-w-md fade-in-up">
+
+        <!-- HEADER LOGO -->
+        <div class="text-center mb-6">
+            <img src="https://github.com/imamsafawi/assets/blob/main/logo_smpn17.png?raw=true"
+                 alt="Logo SMP Negeri 17 Surabaya"
+                 class="school-logo w-20 h-20 sm:w-24 sm:h-24 rounded-2xl mx-auto mb-4 shadow-lg ring-4 ring-white"
+                 loading="eager"
+                 onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23ffffff%22 stroke=%22%234f46e5%22 stroke-width=%221.5%22/><circle cx=%2224%22 cy=%2224%22 r=%2216%22 fill=%22%234f46e5%22/><text x=%2224%22 y=%2229%22 font-size=%2213%22 font-weight=%22bold%22 fill=%22white%22 text-anchor=%22middle%22 font-family=%22Arial,sans-serif%22>SMP</text></svg>';">
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-800">SMP Negeri 17 Surabaya</h1>
+            <p class="text-sm text-slate-500 mt-1">Test Kemampuan Akademik (TKA)</p>
+        </div>
+
+        <!-- CARD LOGIN -->
+        <div class="glass border border-white/70 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl shadow-indigo-200/50">
+
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-indigo-200">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-lg sm:text-xl font-bold text-slate-800">Login Siswa</h2>
+                <p class="text-xs sm:text-sm text-slate-500 mt-1">Masukkan data Anda dengan benar</p>
+            </div>
+
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+
+                <!-- NAMA -->
+                <div>
+                    <label for="input-nama" class="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">
+                        Nama Lengkap <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text"
+                           id="input-nama"
+                           required
+                           autocomplete="off"
+                           placeholder="Contoh: Ahmad Fauzi"
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition text-sm bg-white/90">
+                </div>
+
+                <!-- NIS -->
+                <div>
+                    <label for="input-nis" class="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">
+                        NIS / NISN <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text"
+                           id="input-nis"
+                           required
+                           inputmode="numeric"
+                           pattern="[0-9]{4,20}"
+                           autocomplete="off"
+                           placeholder="Contoh: 12345"
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition text-sm bg-white/90">
+                    <p class="text-[10px] text-slate-400 mt-1">Hanya angka (4-20 digit)</p>
+                </div>
+
+                <!-- KELAS -->
+                <div>
+                    <label for="input-kelas" class="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">
+                        Kelas <span class="text-rose-500">*</span>
+                    </label>
+                    <select id="input-kelas"
+                            required
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition text-sm bg-white/90">
+                        <option value="">-- Pilih Kelas --</option>
+                        <option value="9A">9A</option>
+                        <option value="9B">9B</option>
+                        <option value="9C">9C</option>
+                        <option value="9D">9D</option>
+                        <option value="9E">9E</option>
+                        <option value="9F">9F</option>
+                        <option value="9G">9G</option>
+                        <option value="9H">9H</option>
+                        <option value="9I">9I</option>
+                        <option value="9J">9J</option>
+                    </select>
+                </div>
+
+                <!-- ERROR MESSAGE -->
+                <div id="error-box" class="hidden bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700 flex items-start gap-2">
+                    <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <span id="error-text"></span>
+                </div>
+
+                <!-- INFO BOX -->
+                <div class="bg-sky-50 border border-sky-200 rounded-xl p-3 text-[11px] sm:text-xs text-sky-700 flex items-start gap-2">
+                    <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Pastikan data yang Anda isi <strong>benar</strong>. Data ini digunakan untuk pelaporan otomatis ke guru pengawas.</span>
+                </div>
+
+                <!-- TOMBOL LOGIN -->
+                <button type="submit"
+                        id="btn-login"
+                        class="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 active:scale-[0.98] text-white font-semibold py-3 rounded-xl text-sm transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2">
+                    <span id="btn-login-text">Masuk & Mulai Ujian</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                    </svg>
+                </button>
+
+            </form>
+
+        </div>
+
+        <p class="text-center text-[10px] text-slate-400 mt-6">
+            © 2026 SMP Negeri 17 Surabaya — Sistem TKA
+        </p>
+
+    </div>
+
+    <script>
+        /* ================================================================
+           LOGIN SISWA
+           Setelah login sukses, data disimpan di sessionStorage
+           lalu redirect ke tka.html
+           ================================================================ */
+
+        const SESSION_KEY = 'tka_smpn17_student';
+
+        /* Cek apakah sudah login sebelumnya */
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                const saved = sessionStorage.getItem(SESSION_KEY);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    if (data.nama && data.nis && data.kelas) {
+                        console.log("✅ Siswa sudah login sebelumnya, redirect ke ujian...");
+                        redirectToExam(data);
+                    }
+                }
+            } catch(e) {
+                console.warn("Gagal cek session:", e);
+            }
+        });
+
+        function showError(msg) {
+            const box = document.getElementById('error-box');
+            const text = document.getElementById('error-text');
+            text.innerText = msg;
+            box.classList.remove('hidden');
+            box.classList.add('shake');
+            setTimeout(() => box.classList.remove('shake'), 400);
+        }
+
+        function hideError() {
+            document.getElementById('error-box').classList.add('hidden');
+        }
+
+        function redirectToExam(data) {
+            /* Redirect ke tka.html dengan URL parameter (agar tka.html bisa baca langsung) */
+            const params = new URLSearchParams({
+                nama: data.nama,
+                nis: data.nis,
+                kelas: data.kelas
+            });
+            window.location.href = `tka.html?${params.toString()}`;
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            hideError();
+
+            const nama = document.getElementById('input-nama').value.trim();
+            const nis = document.getElementById('input-nis').value.trim();
+            const kelas = document.getElementById('input-kelas').value;
+
+            /* Validasi */
+            if (!nama || nama.length < 3) {
+                showError("Nama lengkap minimal 3 karakter.");
+                return;
+            }
+
+            if (!/^[a-zA-Z\s\.\'-]+$/.test(nama)) {
+                showError("Nama hanya boleh berisi huruf, spasi, titik, dan tanda hubung.");
+                return;
+            }
+
+            if (!nis || !/^[0-9]{4,20}$/.test(nis)) {
+                showError("NIS/NISN harus berupa angka 4-20 digit.");
+                return;
+            }
+
+            if (!kelas) {
+                showError("Silakan pilih kelas terlebih dahulu.");
+                return;
+            }
+
+            /* Simpan ke sessionStorage */
+            const studentData = {
+                nama: nama,
+                nis: nis,
+                kelas: kelas,
+                loginTime: new Date().toISOString()
+            };
+
+            try {
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify(studentData));
+                localStorage.setItem(SESSION_KEY + '_backup', JSON.stringify(studentData));
+            } catch(e) {
+                console.warn("Gagal simpan session:", e);
+            }
+
+            /* Loading state */
+            const btn = document.getElementById('btn-login');
+            const btnText = document.getElementById('btn-login-text');
+            btn.disabled = true;
+            btn.classList.add('opacity-70', 'cursor-wait');
+            btnText.innerText = 'Memuat...';
+
+            /* Redirect ke halaman ujian */
+            setTimeout(() => {
+                redirectToExam(studentData);
+            }, 400);
+        }
+
+        /* Format input NIS hanya angka */
+        document.getElementById('input-nis').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+
+        /* Auto-focus ke input nama */
+        setTimeout(() => {
+            document.getElementById('input-nama').focus();
+        }, 200);
+    </script>
+
+</body>
+</html>
