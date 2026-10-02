@@ -241,7 +241,7 @@
                     <div class="text-[10px] sm:text-xs text-sky-700 min-w-0">
                         <p class="font-bold text-sky-800 mb-1">📧 Sistem Pelaporan Otomatis:</p>
                         <ul class="list-disc list-inside space-y-0.5 text-sky-600">
-                            <li>Anda <strong>boleh membuka tab baru</strong> saat ujian</li>
+                            <li>Anda <strong>tidak boleh membuka tab baru</strong> saat ujian</li>
                             <li>Setiap <strong>aktivitas mencurigakan</strong> akan <strong>otomatis dilaporkan</strong> ke guru pengawas</li>
                             <li>Laporan berisi: <strong>nama, NIS, kelas, waktu, dan jenis pelanggaran</strong></li>
                             <li>Guru akan menindaklanjuti berdasarkan laporan yang masuk</li>
@@ -319,7 +319,7 @@
 
     </main>
 
-    <!-- MODAL INFO PELANGGARAN (TIDAK MENGUNCI) -->
+    <!-- MODAL INFO PELANGGARAN -->
     <div id="modal-warning" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 safe-area-top safe-area-bottom">
         <div class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-md w-full shadow-2xl text-center modal-scrollable">
             <div class="w-12 h-12 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-3 border border-amber-300 pulse-ring">
@@ -383,140 +383,999 @@
     <div id="toast-container" class="fixed top-16 right-3 sm:right-5 z-[60] flex flex-col gap-2 max-w-xs sm:max-w-sm pointer-events-none"></div>
 
     <script>
-/* ================================================================
-   KONFIGURASI UJIAN
-   ================================================================ */
-const EXAM_CONFIG = {
-    durationSeconds: 3600,
+        /* ================================================================
+           KONFIGURASI UJIAN — HANYA ADMIN/GURU YANG MENGUBAH BAGIAN INI
+           ================================================================ */
+        const EXAM_CONFIG = {
+            durationSeconds: 3600,
 
-    dailySchedules: {
-        "2026-10-02": { open: "08:35", close: "09:30", label: "Sesi 2" }
-    },
+            dailySchedules: {
+                "2026-10-02": { open: "08:35", close: "09:30", label: "Sesi 2" }
+            },
 
-    defaultSchedule: null,
+            defaultSchedule: null,
 
-    links: {
-        indo: "https://forms.gle/M2bMUvxwAv3YCs4Q7",
-        mtk: "https://forms.gle/TzDVp6Qq5HGLRgiv8"
-    },
+            links: {
+                indo: "https://forms.gle/M2bMUvxwAv3YCs4Q7",
+                mtk: "https://forms.gle/TzDVp6Qq5HGLRgiv8"
+            },
 
-    reportEmail: "info@smpnegeri17surabaya.sch.id",
-    emailEndpoint: "https://script.google.com/macros/s/AKfycbXXX.../exec",
+            /* 📧 Email pelaporan */
+            reportEmail: "info@smpnegeri17surabaya.sch.id",
 
-    studentName: "Siswa TKA",
-    studentClass: "9",
-    studentNIS: ""
-};
+            /* 🔧 GANTI dengan URL Apps Script Anda setelah deploy */
+            emailEndpoint: "https://script.google.com/macros/s/AKfycbxe9m5QUhsHvljYy4re_gNGC5GyLyK6jDJhy4bj83tTb6N0iEY6HbXwafowQU708AJA6Q/exec",
 
-/* ================================================================
-   LOAD IDENTITAS SISWA
-   ================================================================ */
-(function loadStudentIdentity() {
-    try {
-        const params = new URLSearchParams(window.location.search);
-        const urlNama = params.get('nama') || params.get('name');
-        const urlNis = params.get('nis') || params.get('nisn');
-        const urlKelas = params.get('kelas') || params.get('class');
+            /* 📋 Identitas siswa — diisi otomatis dari URL/session */
+            studentName: "Siswa TKA",
+            studentClass: "9",
+            studentNIS: ""
+        };
 
-        if (urlNama && urlNis && urlKelas) {
-            EXAM_CONFIG.studentName = urlNama;
-            EXAM_CONFIG.studentNIS = urlNis;
-            EXAM_CONFIG.studentClass = urlKelas;
-            console.log("✅ Identitas dari URL:", urlNama, urlNis, urlKelas);
-            return;
-        }
+        /* ================================================================
+           LOAD IDENTITAS SISWA — dari URL param atau sessionStorage
+           ================================================================ */
+        (function loadStudentIdentity() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const urlNama = params.get('nama') || params.get('name');
+                const urlNis = params.get('nis') || params.get('nisn');
+                const urlKelas = params.get('kelas') || params.get('class');
 
-        const saved = sessionStorage.getItem('tka_smpn17_student');
-        if (saved) {
-            const data = JSON.parse(saved);
-            if (data.nama && data.nis && data.kelas) {
-                EXAM_CONFIG.studentName = data.nama;
-                EXAM_CONFIG.studentNIS = data.nis;
-                EXAM_CONFIG.studentClass = data.kelas;
-                console.log("✅ Identitas dari session:", data.nama, data.nis, data.kelas);
-                return;
+                if (urlNama && urlNis && urlKelas) {
+                    EXAM_CONFIG.studentName = urlNama;
+                    EXAM_CONFIG.studentNIS = urlNis;
+                    EXAM_CONFIG.studentClass = urlKelas;
+                    console.log("✅ Identitas dari URL:", urlNama, urlNis, urlKelas);
+                    return;
+                }
+
+                const saved = sessionStorage.getItem('tka_smpn17_student');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    if (data.nama && data.nis && data.kelas) {
+                        EXAM_CONFIG.studentName = data.nama;
+                        EXAM_CONFIG.studentNIS = data.nis;
+                        EXAM_CONFIG.studentClass = data.kelas;
+                        console.log("✅ Identitas dari session:", data.nama, data.nis, data.kelas);
+                        return;
+                    }
+                }
+
+                console.warn("⚠️ Tidak ada identitas siswa, redirect ke login.html");
+                window.location.href = 'index.html';
+            } catch(e) {
+                console.warn("Gagal load identitas:", e);
+                window.location.href = 'index.html';
+            }
+        })();
+
+        /* ================================================================
+           DEKLARASI STATE GLOBAL
+           ================================================================ */
+        const STORAGE_KEY = 'tka_smpn17_state_v3';
+
+        let studentState = {
+            violations: 0,
+            examActive: false,
+            currentSubject: null,
+            completedIndo: false,
+            completedMtk: false,
+            timeLeft: 0,
+            examEndTime: 0,
+            isFullscreen: false
+        };
+
+        let timerInterval = null;
+        let scheduleInterval = null;
+        let devtoolsInterval = null;
+        let windowSizeInterval = null;
+        let focusCheckInterval = null;
+        let pendingSubject = null;
+
+        let hiddenStartTime = 0;
+        let blurStartTime = 0;
+        const MIN_AWAY_DURATION = 1500;
+
+        let lastWindowWidth = window.innerWidth;
+        let lastWindowHeight = window.innerHeight;
+        let windowResizeCount = 0;
+
+        let fullscreenEverEntered = false;
+        let fullscreenSupported = true;
+        let suppressFullscreenEvent = false;
+
+        let violationGracePeriod = false;
+
+        let iframeReady = false;
+        const IFRAME_GRACE_MS = 5000;
+        let antiCheatArmed = false;
+
+        let isStartingExam = false;
+        let lastFocusState = true;
+        let lastViolationTime = 0;
+
+        let violationEventLocked = false;
+        let violationEventTimer = null;
+        const VIOLATION_EVENT_LOCK_MS = 8000;
+
+        /* ================================================================
+           SISTEM PELAPORAN EMAIL OTOMATIS
+           ================================================================ */
+        async function sendEmailReport(eventType, details, reasonFriendly) {
+            const now = new Date();
+            const waktuLengkap = now.toLocaleString('id-ID', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+
+            const report = {
+                _subject: `🚨 [TKA SMPN 17] Pelanggaran oleh ${EXAM_CONFIG.studentName} (${EXAM_CONFIG.studentClass})`,
+                _template: 'table',
+                _captcha: 'false',
+
+                "Nama Siswa": EXAM_CONFIG.studentName,
+                "NIS": EXAM_CONFIG.studentNIS || "(tidak diisi)",
+                "Kelas": EXAM_CONFIG.studentClass,
+                "Waktu Kejadian": waktuLengkap,
+                "Jenis Pelanggaran": reasonFriendly || eventType,
+                "Detail Teknis": details || "-",
+                "Total Pelanggaran": `${studentState.violations} kali`,
+                "Mata Pelajaran": studentState.currentSubject === 'indo' ? 'Bahasa Indonesia' :
+                                   studentState.currentSubject === 'mtk' ? 'Matematika' : '(belum mulai)',
+                "Sisa Waktu Ujian": `${Math.floor(studentState.timeLeft / 60)} menit ${studentState.timeLeft % 60} detik`,
+                "URL Halaman": window.location.href,
+                "User Agent (HP/Laptop)": navigator.userAgent,
+                "Platform": navigator.platform || "unknown",
+                "Bahasa Browser": navigator.language || "unknown",
+                "Resolusi Layar": `${window.screen.width}x${window.screen.height}`,
+                "Timestamp ISO": now.toISOString()
+            };
+
+            try {
+                const response = await fetch(EXAM_CONFIG.emailEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(report)
+                });
+
+                if (response.ok) {
+                    console.log("✅ Laporan terkirim ke email:", EXAM_CONFIG.reportEmail);
+                    showToast(`📧 Laporan terkirim ke guru (${reasonFriendly})`, 'success');
+                    return true;
+                } else {
+                    console.warn("⚠️ Response tidak OK:", response.status);
+                    showToast(`⚠️ Laporan gagal terkirim (status ${response.status})`, 'warning');
+                    return false;
+                }
+            } catch (err) {
+                console.error("❌ Gagal kirim laporan:", err);
+                try {
+                    await fetch(EXAM_CONFIG.emailEndpoint, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(report)
+                    });
+                    showToast(`📧 Laporan terkirim (mode fallback)`, 'success');
+                    return true;
+                } catch(e2) {
+                    showToast(`❌ Laporan gagal terkirim — periksa koneksi`, 'error');
+                    return false;
+                }
             }
         }
 
-        console.warn("⚠️ Tidak ada identitas siswa, redirect ke login.html");
-        window.location.href = 'index.html';
-    } catch(e) {
-        console.warn("Gagal load identitas:", e);
-        window.location.href = 'index.html';
-    }
-})();
+        function showToast(message, type) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
 
-/* ================================================================
-   DEKLARASI STATE GLOBAL — INI YANG HILANG!
-   ================================================================ */
-const STORAGE_KEY = 'tka_smpn17_state_v3';
+            const colors = {
+                success: 'bg-emerald-500',
+                warning: 'bg-amber-500',
+                error: 'bg-rose-500',
+                info: 'bg-sky-500'
+            };
+            const bg = colors[type] || colors.info;
 
-let studentState = {
-    violations: 0,
-    examActive: false,
-    currentSubject: null,
-    completedIndo: false,
-    completedMtk: false,
-    timeLeft: 0,
-    examEndTime: 0,
-    isFullscreen: false
-};
+            const div = document.createElement('div');
+            div.className = `toast-enter ${bg} text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl shadow-2xl text-[11px] sm:text-xs font-medium flex items-start gap-2 pointer-events-auto`;
+            div.innerHTML = `<span class="flex-shrink-0 mt-0.5">${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span><span class="min-w-0">${message}</span>`;
+            container.appendChild(div);
 
-let timerInterval = null;
-let scheduleInterval = null;
-let devtoolsInterval = null;
-let windowSizeInterval = null;
-let pendingSubject = null;
+            setTimeout(() => {
+                div.style.transition = 'opacity 0.3s, transform 0.3s';
+                div.style.opacity = '0';
+                div.style.transform = 'translateX(100%)';
+                setTimeout(() => { if (div.parentNode) div.parentNode.removeChild(div); }, 350);
+            }, 4500);
+        }
 
-let hiddenStartTime = 0;
-let blurStartTime = 0;
-const MIN_AWAY_DURATION = 1500;
+        function initStudentBadge() {
+            const badge = document.getElementById('student-info-badge');
+            if (badge) {
+                const text = `${EXAM_CONFIG.studentName} • ${EXAM_CONFIG.studentClass}${EXAM_CONFIG.studentNIS ? ' • ' + EXAM_CONFIG.studentNIS : ''}`;
+                badge.innerText = text;
+                badge.title = text;
+            }
+        }
 
-let lastWindowWidth = window.innerWidth;
-let lastWindowHeight = window.innerHeight;
-let windowResizeCount = 0;
+        /* ================================================================
+           STATE STORAGE
+           ================================================================ */
+        function loadStateFromStorage() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.violations) studentState.violations = parsed.violations;
+                    if (parsed.completedIndo) studentState.completedIndo = true;
+                    if (parsed.completedMtk) studentState.completedMtk = true;
+                }
+            } catch (e) {
+                console.warn("Gagal load state:", e);
+            }
+        }
 
-let violationGracePeriod = false;
+        function saveStateToStorage() {
+            try {
+                const toSave = {
+                    violations: studentState.violations,
+                    completedIndo: studentState.completedIndo,
+                    completedMtk: studentState.completedMtk
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+            } catch (e) {
+                console.warn("Gagal simpan state:", e);
+            }
+        }
 
-let iframeReady = false;
-const IFRAME_GRACE_MS = 5000;
-let antiCheatArmed = false;
-
-let isStartingExam = false;
-let lastViolationTime = 0;
-
-let violationEventLocked = false;
-let violationEventTimer = null;
-const VIOLATION_EVENT_LOCK_MS = 8000;
-
-/* ================================================================
-   FUNGSI LOGGING
-   ================================================================ */
-async function logToSheets(eventType, details) {
-    if (!EXAM_CONFIG.loggingUrl && !EXAM_CONFIG.emailEndpoint) return;
-    try {
-        const payload = {
-            timestamp: new Date().toISOString(),
-            name: EXAM_CONFIG.studentName,
-            class: EXAM_CONFIG.studentClass,
-            nis: EXAM_CONFIG.studentNIS,
-            event: eventType,
-            details: details || "",
-            userAgent: navigator.userAgent,
-            platform: navigator.platform || "unknown",
-            violations: studentState.violations
+        window.resetExamState = function() {
+            try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+            location.reload();
         };
-        console.log("📤 Log:", payload);
-    } catch (e) {
-        console.warn("Gagal log:", e);
-    }
-}
 
-/* ================================================================
-   SISANYA SAMA — FUNGSI-FUNGSI LAIN TETAP SEPERTI SEBELUMNYA
-   ================================================================ */
+        /* ============ DETEKSI INCOGNITO ============ */
+        async function detectIncognito() {
+            return new Promise((resolve) => {
+                try {
+                    const testKey = '__tka_test_' + Date.now();
+                    localStorage.setItem(testKey, '1');
+                    localStorage.removeItem(testKey);
+                    if ('storage' in navigator && 'estimate' in navigator.storage && typeof navigator.storage.estimate === 'function') {
+                        navigator.storage.estimate().then((result) => {
+                            const quota = result && result.quota;
+                            if (quota && quota < 120000000) resolve(true);
+                            else resolve(false);
+                        }).catch(() => resolve(false));
+                    } else {
+                        resolve(false);
+                    }
+                } catch (e) {
+                    resolve(true);
+                }
+            });
+        }
 
-/* ... (fungsi loadStateFromStorage, saveStateToStorage, dst) ... */
-</script>
+        /* ============ DETEKSI DEVTOOLS ============ */
+        function startDevtoolsDetection() {
+            devtoolsInterval = setInterval(() => {
+                if (!studentState.examActive) return;
+                if (violationGracePeriod || !antiCheatArmed) return;
+
+                const start = performance.now();
+                // eslint-disable-next-line no-debugger
+                debugger;
+                const end = performance.now();
+
+                if (end - start > 150) {
+                    reportViolation("DEVTOOLS", "DevTools / Inspect Element terdeteksi", "Membuka Developer Tools");
+                }
+            }, 3000);
+        }
+
+        /* ============ DETEKSI SPLIT-SCREEN ============ */
+        function startWindowSizeDetection() {
+            windowSizeInterval = setInterval(() => {
+                if (!studentState.examActive) return;
+                if (violationGracePeriod || !antiCheatArmed) return;
+
+                const currentWidth = window.innerWidth;
+                const currentHeight = window.innerHeight;
+                const wDiff = Math.abs(currentWidth - lastWindowWidth);
+                const hDiff = Math.abs(currentHeight - lastWindowHeight);
+
+                const widthChange = wDiff / (lastWindowWidth || 1);
+                const heightChange = hDiff / (lastWindowHeight || 1);
+
+                if (widthChange > 0.25 || heightChange > 0.25) {
+                    const isRotation = (
+                        (lastWindowWidth < lastWindowHeight && currentWidth > currentHeight) ||
+                        (lastWindowWidth > lastWindowHeight && currentWidth < currentHeight)
+                    );
+
+                    if (!isRotation) {
+                        windowResizeCount++;
+                        if (windowResizeCount >= 2) {
+                            windowResizeCount = 0;
+                            reportViolation("SPLITSCREEN", `Window berubah: ${currentWidth}x${currentHeight}`, "Split-screen / mengubah ukuran jendela");
+                        }
+                    } else {
+                        windowResizeCount = 0;
+                    }
+                } else {
+                    windowResizeCount = 0;
+                }
+
+                lastWindowWidth = currentWidth;
+                lastWindowHeight = currentHeight;
+            }, 2500);
+        }
+
+        /* ============ BLOKIR + LAPOR KEYBOARD SHORTCUT ============ */
+        document.addEventListener('keydown', (e) => {
+            if (!studentState.examActive) return;
+
+            const key = (e.key || '').toLowerCase();
+            const ctrl = e.ctrlKey || e.metaKey;
+            const shift = e.shiftKey;
+
+            const dangerous = [
+                ctrl && ['c','v','x','a'].includes(key),
+                ctrl && ['s','p'].includes(key),
+                ctrl && key === 'u',
+                key === 'f12',
+                ctrl && shift && ['i','j','c','k'].includes(key),
+                ctrl && ['t','n','w'].includes(key),
+                key === 'f5',
+                ctrl && key === 'r',
+                (e.altKey && ['arrowleft','arrowright'].includes(key)),
+                ctrl && key === 'tab',
+            ];
+
+            if (dangerous.some(b => b === true)) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                let shortcutName = '';
+                if (key === 'f12') shortcutName = 'F12';
+                else if (ctrl && shift && key === 'i') shortcutName = 'Ctrl+Shift+I';
+                else if (ctrl && shift && key === 'j') shortcutName = 'Ctrl+Shift+J';
+                else if (ctrl && shift && key === 'c') shortcutName = 'Ctrl+Shift+C';
+                else if (ctrl && key === 'u') shortcutName = 'Ctrl+U (View Source)';
+                else if (ctrl && key === 'c') shortcutName = 'Ctrl+C (Copy)';
+                else if (ctrl && key === 'v') shortcutName = 'Ctrl+V (Paste)';
+                else if (ctrl && key === 'p') shortcutName = 'Ctrl+P (Print)';
+                else if (ctrl && key === 't') shortcutName = 'Ctrl+T (Tab Baru)';
+                else if (ctrl && key === 'n') shortcutName = 'Ctrl+N (Window Baru)';
+                else if (key === 'f5' || (ctrl && key === 'r')) shortcutName = 'Refresh (F5/Ctrl+R)';
+                else shortcutName = `${e.ctrlKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
+
+                reportViolation("SHORTCUT", `Shortcut: ${shortcutName}`, `Menekan shortcut terlarang (${shortcutName})`);
+                return false;
+            }
+        }, true);
+
+        /* ============ INIT ============ */
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                initStudentBadge();
+
+                const incognito = await detectIncognito();
+                if (incognito) {
+                    document.body.innerHTML = `
+                        <div style="min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:linear-gradient(135deg,#eef2ff,#e0f2fe,#ecfdf5)">
+                            <div style="background:white;border:1px solid #fecaca;border-radius:24px;padding:32px;max-width:480px;width:100%;text-align:center;box-shadow:0 20px 40px rgba(244,63,94,0.15)">
+                                <div style="width:64px;height:64px;background:#fee2e2;color:#e11d48;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:32px">⚠️</div>
+                                <h1 style="color:#e11d48;font-size:20px;font-weight:bold;margin-bottom:8px">Mode Incognito Terdeteksi</h1>
+                                <p style="color:#475569;font-size:14px;line-height:1.6">Ujian tidak dapat dijalankan di mode <strong>Incognito/Private</strong>. Silakan tutup tab ini dan buka kembali di <strong>mode normal</strong> untuk memulai ujian.</p>
+                                <p style="color:#94a3b8;font-size:12px;margin-top:16px">SMP Negeri 17 Surabaya - Sistem Pelaporan TKA</p>
+                            </div>
+                        </div>`;
+                    return;
+                }
+
+                loadStateFromStorage();
+                document.getElementById('violation-count-badge').innerText = `${studentState.violations}`;
+                if (studentState.completedIndo) markAsCompleted('indo');
+                if (studentState.completedMtk) markAsCompleted('mtk');
+
+                updateTimerDisplay();
+
+                const scheduleCheck = evaluateTodaySchedule();
+
+                if (!scheduleCheck.exists) {
+                    showClosedScreen(scheduleCheck);
+                    return;
+                }
+
+                checkExamSchedules();
+                scheduleInterval = setInterval(checkExamSchedules, 1000);
+                startDevtoolsDetection();
+                startWindowSizeDetection();
+
+                document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+                console.log(`📋 Identitas: ${EXAM_CONFIG.studentName} | NIS: ${EXAM_CONFIG.studentNIS} | Kelas: ${EXAM_CONFIG.studentClass}`);
+            } catch (err) {
+                console.error("Init error:", err);
+            }
+        });
+
+        /* ============ EVALUASI JADWAL ============ */
+        function evaluateTodaySchedule() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const dateKey = `${year}-${month}-${day}`;
+
+            const scheduleEntry = EXAM_CONFIG.dailySchedules[dateKey];
+
+            if (!scheduleEntry) {
+                if (EXAM_CONFIG.defaultSchedule) {
+                    const sch = Object.assign({}, EXAM_CONFIG.defaultSchedule, { dateKey, isDefault: true });
+                    return buildScheduleResult(sch, true);
+                }
+                return { exists: false, isOpen: false, isBeforeOpen: false, schedule: null, dateKey };
+            }
+
+            const sch = Object.assign({}, scheduleEntry, { dateKey, isDefault: false });
+            return buildScheduleResult(sch, true);
+        }
+
+        function buildScheduleResult(sch, exists) {
+            const now = new Date();
+            const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const isOpen = isTimeInRange(currentTimeStr, sch.open, sch.close);
+            const isBeforeOpen = isBeforeTime(currentTimeStr, sch.open);
+            return { exists: true, isOpen, isBeforeOpen, schedule: sch, dateKey: sch.dateKey };
+        }
+
+        function showClosedScreen(info) {
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-exam').classList.add('hidden');
+            document.getElementById('view-closed').classList.remove('hidden');
+            document.getElementById('exam-header-stats').classList.add('hidden');
+
+            const msg = document.getElementById('closed-message');
+            if (info.dateKey) {
+                msg.innerHTML = `Hari ini (<strong>${formatDateID(info.dateKey)}</strong>) tidak ada jadwal ujian TKA. Silakan kembali sesuai jadwal yang ditentukan.`;
+            } else {
+                msg.innerHTML = `Hari ini tidak ada jadwal ujian TKA. Silakan kembali sesuai jadwal yang ditentukan.`;
+            }
+
+            const list = document.getElementById('closed-schedule-list');
+            const entries = Object.entries(EXAM_CONFIG.dailySchedules || {}).sort();
+
+            if (entries.length === 0) {
+                list.innerHTML = '<li class="text-rose-600 italic">Belum ada jadwal ujian yang diatur.</li>';
+            } else {
+                list.innerHTML = entries.map(([dateKey, sch]) => {
+                    const label = sch.label ? ` (${sch.label})` : '';
+                    return `<li><strong>${formatDateID(dateKey)}</strong>: ${sch.open} - ${sch.close}${label}</li>`;
+                }).join('');
+            }
+
+            const now = new Date();
+            const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const currentSeconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('today-date').innerText = info.dateKey ? formatDateID(info.dateKey) : '--';
+            document.getElementById('live-clock').innerText = `${currentTimeStr}:${currentSeconds}`;
+
+            if (scheduleInterval) clearInterval(scheduleInterval);
+            scheduleInterval = setInterval(() => {
+                const n = new Date();
+                const hh = String(n.getHours()).padStart(2, '0');
+                const mm = String(n.getMinutes()).padStart(2, '0');
+                const ss = String(n.getSeconds()).padStart(2, '0');
+                document.getElementById('live-clock').innerText = `${hh}:${mm}:${ss}`;
+
+                const check = evaluateTodaySchedule();
+                if (check.exists) {
+                    console.log("🔁 Jadwal baru terdeteksi, reload halaman...");
+                    location.reload();
+                }
+            }, 1000);
+        }
+
+        /* ============ JADWAL ============ */
+        function getTodaySchedule() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const dateKey = `${year}-${month}-${day}`;
+
+            if (EXAM_CONFIG.dailySchedules[dateKey]) {
+                return Object.assign({}, EXAM_CONFIG.dailySchedules[dateKey], { dateKey, isDefault: false });
+            }
+            if (EXAM_CONFIG.defaultSchedule) {
+                return Object.assign({}, EXAM_CONFIG.defaultSchedule, { dateKey, isDefault: true });
+            }
+            return { dateKey, open: "00:00", close: "00:00", label: "TIDAK ADA JADWAL", isDefault: false, noSchedule: true };
+        }
+
+        function formatDateID(dateKey) {
+            try {
+                const parts = dateKey.split('-');
+                const y = parts[0], m = parts[1], d = parts[2];
+                const bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+                return `${d} ${bulan[parseInt(m, 10) - 1]} ${y}`;
+            } catch(e) {
+                return dateKey;
+            }
+        }
+
+        /* ============ TIMER ============ */
+        function startSubjectTimer() {
+            studentState.examEndTime = Date.now() + (EXAM_CONFIG.durationSeconds * 1000);
+            studentState.timeLeft = EXAM_CONFIG.durationSeconds;
+            updateTimerDisplay();
+
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                const now = Date.now();
+                const remaining = Math.max(0, Math.round((studentState.examEndTime - now) / 1000));
+                studentState.timeLeft = remaining;
+                updateTimerDisplay();
+
+                if (remaining <= 0) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    if (studentState.examActive) alertTimeout();
+                }
+            }, 1000);
+        }
+
+        function stopSubjectTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function updateTimerDisplay() {
+            if (studentState.timeLeft <= 0 && !studentState.examActive) {
+                document.getElementById('timer-display').innerText = "--:--";
+                return;
+            }
+            const minutes = Math.floor(studentState.timeLeft / 60);
+            const seconds = studentState.timeLeft % 60;
+            document.getElementById('timer-display').innerText =
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function alertTimeout() {
+            showToast("⏰ Waktu ujian Anda telah habis!", 'warning');
+            if (studentState.currentSubject) returnToDashboard();
+        }
+
+        function markAsCompleted(subjectKey) {
+            const btn = document.getElementById('btn-' + subjectKey);
+            const status = document.getElementById('status-' + subjectKey);
+            const card = document.getElementById('card-' + subjectKey);
+            const icon = document.getElementById('icon-' + subjectKey);
+
+            btn.disabled = true;
+            delete btn.dataset.active;
+            btn.className = "w-full bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-xs sm:text-sm cursor-not-allowed transition shadow-md shadow-emerald-200 flex items-center justify-center gap-2";
+            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg> Selesai';
+
+            status.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Telah Dikerjakan';
+            status.className = "text-xs text-emerald-600 mb-2 font-medium flex items-center gap-1.5";
+
+            card.classList.remove('card-locked');
+            card.classList.add('card-done');
+
+            icon.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
+            icon.className = "w-10 h-10 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold mb-3 shadow-md shadow-emerald-200";
+        }
+
+        function updateTransitionNotice() {
+            const notice = document.getElementById('transition-notice');
+            const iconEl = document.getElementById('notice-icon');
+            const titleEl = document.getElementById('notice-title');
+            const bodyEl = document.getElementById('notice-body');
+
+            if (studentState.completedIndo && studentState.completedMtk) {
+                notice.className = "mb-6 rounded-xl p-4 text-xs sm:text-sm flex items-start gap-3 bg-emerald-100 border border-emerald-300 text-emerald-700";
+                iconEl.innerHTML = '<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                titleEl.className = "font-bold block text-emerald-800 mb-0.5 text-xs sm:text-sm";
+                titleEl.innerText = "🎉 Semua Ujian Telah Selesai!";
+                bodyEl.innerHTML = "Selamat! Anda telah menyelesaikan seluruh rangkaian <strong>Test Kemampuan Akademik (TKA)</strong>. Terima kasih atas kerja keras Anda.";
+                notice.classList.remove('hidden');
+            } else if (studentState.completedIndo) {
+                notice.className = "mb-6 rounded-xl p-4 text-xs sm:text-sm flex items-start gap-3 bg-sky-100 border border-sky-300 text-sky-700";
+                iconEl.innerHTML = '<svg class="w-5 h-5 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                titleEl.className = "font-bold block text-slate-800 mb-0.5 text-xs sm:text-sm";
+                titleEl.innerText = "Ujian Bahasa Indonesia Selesai!";
+                bodyEl.innerHTML = "Kerja bagus! Silakan lanjutkan segera ke soal <strong>Matematika</strong>.";
+                notice.classList.remove('hidden');
+            } else {
+                notice.classList.add('hidden');
+            }
+        }
+
+        function checkExamSchedules() {
+            const now = new Date();
+            const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const currentSeconds = String(now.getSeconds()).padStart(2, '0');
+
+            document.getElementById('live-clock').innerText = `${currentTimeStr}:${currentSeconds}`;
+
+            const todaySchedule = getTodaySchedule();
+
+            if (todaySchedule.noSchedule) {
+                showClosedScreen({ exists: false, dateKey: todaySchedule.dateKey });
+                return;
+            }
+
+            document.getElementById('today-date').innerText = formatDateID(todaySchedule.dateKey);
+
+            const scheduleLabel = `Jadwal: ${todaySchedule.open} - ${todaySchedule.close}${todaySchedule.label ? ' • ' + todaySchedule.label : ''}`;
+            document.getElementById('schedule-info-indo').innerText = scheduleLabel;
+            document.getElementById('schedule-info-mtk').innerText = scheduleLabel;
+
+            const isOpen = isTimeInRange(currentTimeStr, todaySchedule.open, todaySchedule.close);
+            const isBeforeOpen = isBeforeTime(currentTimeStr, todaySchedule.open);
+
+            /* ===== TOMBOL BAHASA INDONESIA ===== */
+            const btnIndo = document.getElementById('btn-indo');
+            if (studentState.completedIndo) {
+                markAsCompleted('indo');
+            } else if (isOpen) {
+                btnIndo.disabled = false;
+                btnIndo.className = "w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 active:scale-[0.98] text-white font-medium py-2.5 rounded-xl text-xs sm:text-sm transition shadow-lg shadow-indigo-200";
+                btnIndo.innerText = "Mulai Soal B. Indonesia";
+            } else {
+                btnIndo.disabled = true;
+                btnIndo.className = "w-full bg-slate-200 text-slate-400 font-medium py-2.5 rounded-xl text-xs sm:text-sm cursor-not-allowed transition";
+                btnIndo.innerText = isBeforeOpen
+                    ? `🔒 Belum Dibuka (Pukul ${todaySchedule.open})`
+                    : "🔒 Waktu Ujian Telah Ditutup";
+            }
+
+            /* ===== TOMBOL MATEMATIKA ===== */
+            const btnMtk = document.getElementById('btn-mtk');
+            const cardMtk = document.getElementById('card-mtk');
+            const statusMtk = document.getElementById('status-mtk');
+
+            if (studentState.completedMtk) {
+                markAsCompleted('mtk');
+            } else if (!studentState.completedIndo) {
+                btnMtk.disabled = true;
+                btnMtk.className = "w-full bg-slate-200 text-slate-400 font-medium py-2.5 rounded-xl text-xs sm:text-sm cursor-not-allowed transition";
+                btnMtk.innerText = "🔒 Selesaikan B. Indonesia Dahulu";
+                cardMtk.classList.add('card-locked');
+                statusMtk.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500"></span> Terkunci - Menunggu B. Indonesia';
+                statusMtk.className = "text-xs text-amber-600 mb-2 font-medium flex items-center gap-1.5";
+            } else if (isOpen) {
+                cardMtk.classList.remove('card-locked');
+                btnMtk.disabled = false;
+                btnMtk.className = "w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 active:scale-[0.98] text-white font-medium py-2.5 rounded-xl text-xs sm:text-sm transition shadow-lg shadow-emerald-200";
+                btnMtk.innerText = "Mulai Soal Matematika";
+                statusMtk.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Siap Dikerjakan';
+                statusMtk.className = "text-xs text-emerald-600 mb-2 font-medium flex items-center gap-1.5";
+            } else {
+                cardMtk.classList.remove('card-locked');
+                btnMtk.disabled = true;
+                btnMtk.className = "w-full bg-slate-200 text-slate-400 font-medium py-2.5 rounded-xl text-xs sm:text-sm cursor-not-allowed transition";
+                btnMtk.innerText = isBeforeOpen
+                    ? `🔒 Belum Dibuka (Pukul ${todaySchedule.open})`
+                    : "🔒 Waktu Ujian Telah Ditutup";
+            }
+
+            updateTransitionNotice();
+
+            const banner = document.getElementById('schedule-banner');
+            const statusText = document.getElementById('schedule-status-text');
+
+            if (studentState.completedIndo && studentState.completedMtk) {
+                banner.className = "mb-5 bg-sky-100 border border-sky-300 rounded-xl p-3.5 text-xs text-sky-700 flex items-center justify-between gap-3";
+                statusText.innerText = "Status: Semua Ujian Telah Selesai Dikerjakan";
+            } else if (isOpen) {
+                banner.className = "mb-5 bg-emerald-100 border border-emerald-300 rounded-xl p-3.5 text-xs text-emerald-700 flex items-center justify-between gap-3";
+                statusText.innerText = "Status: Jadwal Ujian Sedang Berlangsung";
+            } else {
+                banner.className = "mb-5 bg-amber-100 border border-amber-300 rounded-xl p-3.5 text-xs text-amber-700 flex items-center justify-between gap-3";
+                statusText.innerText = isBeforeOpen
+                    ? `Status: Ujian dibuka pukul ${todaySchedule.open}`
+                    : "Status: Waktu ujian telah ditutup";
+            }
+        }
+
+        function isTimeInRange(current, open, close) {
+            const toMinutes = (t) => {
+                const [h, m] = t.split(':').map(Number);
+                return h * 60 + m;
+            };
+            const cur = toMinutes(current);
+            return cur >= toMinutes(open) && cur <= toMinutes(close);
+        }
+
+        function isBeforeTime(current, target) {
+            const toMinutes = (t) => {
+                const [h, m] = t.split(':').map(Number);
+                return h * 60 + m;
+            };
+            return toMinutes(current) < toMinutes(target);
+        }
+
+        function startExam(subjectKey) {
+            const info = evaluateTodaySchedule();
+            if (!info.exists) {
+                showToast("⚠️ Hari ini tidak ada jadwal ujian TKA.", 'warning');
+                return;
+            }
+
+            if (!info.isOpen) {
+                if (info.isBeforeOpen) {
+                    showToast(`⚠️ Soal belum dibuka. Jadwal: ${info.schedule.open} - ${info.schedule.close}`, 'warning');
+                } else {
+                    showToast(`⚠️ Waktu ujian telah ditutup. Jadwal: ${info.schedule.open} - ${info.schedule.close}`, 'warning');
+                }
+                return;
+            }
+
+            if (subjectKey === 'indo' && studentState.completedIndo) {
+                showToast("⚠️ Soal Bahasa Indonesia sudah selesai dikerjakan!", 'warning');
+                return;
+            }
+            if (subjectKey === 'mtk') {
+                if (!studentState.completedIndo) {
+                    showToast("⚠️ Anda harus menyelesaikan Bahasa Indonesia terlebih dahulu!", 'warning');
+                    return;
+                }
+                if (studentState.completedMtk) {
+                    showToast("⚠️ Soal Matematika sudah selesai dikerjakan!", 'warning');
+                    return;
+                }
+            }
+
+            pendingSubject = subjectKey;
+            document.getElementById('confirm-subject-name').innerText =
+                subjectKey === 'indo' ? 'Bahasa Indonesia' : 'Matematika';
+            document.getElementById('confirm-duration').innerText =
+                `${Math.floor(EXAM_CONFIG.durationSeconds / 60)} menit`;
+            document.getElementById('modal-confirm-start').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            pendingSubject = null;
+            document.getElementById('modal-confirm-start').classList.add('hidden');
+        }
+
+        async function confirmStartExam() {
+            if (!pendingSubject) return;
+            if (isStartingExam) return;
+            isStartingExam = true;
+
+            const subjectKey = pendingSubject;
+            pendingSubject = null;
+            document.getElementById('modal-confirm-start').classList.add('hidden');
+
+            violationGracePeriod = true;
+            iframeReady = false;
+            antiCheatArmed = false;
+
+            violationEventLocked = false;
+            if (violationEventTimer) { clearTimeout(violationEventTimer); violationEventTimer = null; }
+            lastViolationTime = 0;
+
+            const graceIndicator = document.getElementById('grace-indicator');
+            graceIndicator.style.display = 'block';
+            graceIndicator.innerText = '⏳ Menyiapkan ujian... mohon tunggu';
+
+            hiddenStartTime = 0;
+            blurStartTime = 0;
+            windowResizeCount = 0;
+            lastWindowWidth = window.innerWidth;
+            lastWindowHeight = window.innerHeight;
+
+            studentState.examActive = true;
+            studentState.currentSubject = subjectKey;
+
+            const title = subjectKey === 'indo' ? 'Bahasa Indonesia - TKA SMPN 17 Surabaya' : 'Matematika - TKA SMPN 17 Surabaya';
+            const url = EXAM_CONFIG.links[subjectKey];
+
+            document.getElementById('active-exam-title').innerText = title;
+
+            const iframe = document.getElementById('exam-iframe');
+            iframe.onload = function() {
+                iframeReady = true;
+                console.log("✅ Iframe ready — grace period iframe mulai");
+
+                graceIndicator.innerText = '⏳ Mengisi soal... jangan keluar tab';
+
+                setTimeout(() => {
+                    violationGracePeriod = false;
+                    antiCheatArmed = true;
+                    hiddenStartTime = 0;
+                    blurStartTime = 0;
+                    graceIndicator.style.display = 'none';
+                    console.log("✅ Pelaporan otomatis AKTIF");
+                }, IFRAME_GRACE_MS);
+            };
+
+            iframe.src = url;
+
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-exam').classList.remove('hidden');
+
+            startSubjectTimer();
+
+            setTimeout(() => {
+                if (!antiCheatArmed) {
+                    console.log("⚠️ Fallback: pelaporan diaktifkan paksa setelah 3 detik");
+                    violationGracePeriod = false;
+                    antiCheatArmed = true;
+                    graceIndicator.style.display = 'none';
+                }
+            }, 3000);
+
+            setTimeout(() => { isStartingExam = false; }, 2000);
+        }
+
+        function returnToDashboard() {
+            stopSubjectTimer();
+
+            violationGracePeriod = true;
+            iframeReady = false;
+            antiCheatArmed = false;
+
+            violationEventLocked = false;
+            if (violationEventTimer) { clearTimeout(violationEventTimer); violationEventTimer = null; }
+
+            if (studentState.currentSubject === 'indo') {
+                studentState.completedIndo = true;
+                markAsCompleted('indo');
+            } else if (studentState.currentSubject === 'mtk') {
+                studentState.completedMtk = true;
+                markAsCompleted('mtk');
+            }
+
+            studentState.examActive = false;
+            studentState.currentSubject = null;
+            studentState.timeLeft = 0;
+            updateTimerDisplay();
+
+            saveStateToStorage();
+
+            document.getElementById('exam-iframe').src = "";
+            document.getElementById('exam-iframe').onload = null;
+            document.getElementById('view-exam').classList.add('hidden');
+            document.getElementById('view-dashboard').classList.remove('hidden');
+            document.getElementById('grace-indicator').style.display = 'none';
+
+            setTimeout(() => {
+                violationGracePeriod = false;
+                iframeReady = false;
+                antiCheatArmed = false;
+                hiddenStartTime = 0;
+                blurStartTime = 0;
+            }, 1500);
+
+            updateTransitionNotice();
+            checkExamSchedules();
+        }
+
+        function finishAllExams() {
+            if (confirm("Apakah Anda yakin ingin menyelesaikan seluruh sesi dan keluar dari sistem ujian?")) {
+                showToast("Terima kasih telah mengikuti Test Kemampuan Akademik (TKA) SMP Negeri 17 Surabaya.", 'success');
+                try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+                setTimeout(() => location.reload(), 2000);
+            }
+        }
+
+        /* ================================================================
+           DETEKSI PELANGGARAN + LAPOR OTOMATIS
+           ================================================================ */
+
+        document.addEventListener('visibilitychange', () => {
+            if (!studentState.examActive) return;
+            if (violationGracePeriod || !antiCheatArmed) return;
+
+            if (document.hidden) {
+                hiddenStartTime = Date.now();
+                blurStartTime = Date.now();
+            } else {
+                if (hiddenStartTime > 0) {
+                    const awayDuration = Date.now() - hiddenStartTime;
+                    hiddenStartTime = 0;
+                    blurStartTime = 0;
+                    if (awayDuration >= MIN_AWAY_DURATION) {
+                        reportViolation("TAB_SWITCH",
+                            `Pindah tab/aplikasi selama ${(awayDuration/1000).toFixed(1)} detik`,
+                            "Pindah ke tab / aplikasi lain");
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('blur', () => {
+            if (!studentState.examActive) return;
+            if (violationGracePeriod || !antiCheatArmed) return;
+            if (blurStartTime === 0) blurStartTime = Date.now();
+        });
+
+        window.addEventListener('focus', () => {
+            if (!studentState.examActive) return;
+
+            if (violationGracePeriod || !antiCheatArmed) {
+                blurStartTime = 0;
+                hiddenStartTime = 0;
+                return;
+            }
+
+            if (blurStartTime > 0 && !document.hidden) {
+                const awayDuration = Date.now() - blurStartTime;
+                blurStartTime = 0;
+                if (awayDuration >= MIN_AWAY_DURATION) {
+                    reportViolation("WINDOW_BLUR",
+                        `Jendela kehilangan fokus selama ${(awayDuration/1000).toFixed(1)} detik`,
+                        "Membuka aplikasi / jendela lain");
+                }
+            }
+        });
+
+        /* ================================================================
+           LAPOR PELANGGARAN (TANPA MENGUNCI)
+           ================================================================ */
+        async function reportViolation(code, detail, reasonFriendly) {
+            if (!studentState.examActive) return;
+            if (violationGracePeriod || !antiCheatArmed) return;
+
+            if (violationEventLocked) {
+                console.log("⏭️ Pelanggaran diabaikan (masih dalam kejadian yang sama):", reasonFriendly);
+                return;
+            }
+
+            const now = Date.now();
+            if (now - lastViolationTime < 3000) {
+                console.log("⏭️ Pelanggaran diabaikan (debounce 3 detik)");
+                return;
+            }
+            lastViolationTime = now;
+
+            violationEventLocked = true;
+            if (violationEventTimer) clearTimeout(violationEventTimer);
+            violationEventTimer = setTimeout(() => {
+                violationEventLocked = false;
+            }, VIOLATION_EVENT_LOCK_MS);
+
+            studentState.violations++;
+            document.getElementById('violation-count-badge').innerText = `${studentState.violations}`;
+            saveStateToStorage();
+
+            showViolationModal(reasonFriendly, detail);
+
+            await sendEmailReport(code, detail, reasonFriendly);
+        }
+
+        function showViolationModal(reasonFriendly, detail) {
+            const msg = `Terdeteksi: ${reasonFriendly}. Laporan otomatis telah dikirim ke guru pengawas.`;
+            document.getElementById('warning-message-text').innerText = msg;
+            document.getElementById('modal-warning').classList.remove('hidden');
+
+            setTimeout(() => {
+                document.getElementById('modal-warning').classList.add('hidden');
+            }, 6000);
+        }
+
+        function closeWarningModal() {
+            document.getElementById('modal-warning').classList.add('hidden');
+        }
+
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted && studentState.examActive) {
+                console.log("🔄 Halaman di-restore dari bfcache");
+            }
+        });
+    </script>
 </body>
 </html>
